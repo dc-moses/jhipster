@@ -7,7 +7,6 @@ pipeline {
     BRANCH = 'main'
     POLARIS_ACCESS_TOKEN = credentials('polaris-token')
     BLACKDUCK_ACCESS_TOKEN = credentials('BlackDuck-AuthToken')
-    IO_TOKEN = credentials('IO-AUTH-TOKEN')
     CODEDX_TOKEN = credentials('CODEDX_API_KEY')
     GITHUB_TOKEN = credentials('github-token')
     SEEKER_TOKEN = credentials('SEEKER_TOKEN')
@@ -45,61 +44,7 @@ pipeline {
         '''
       }
     }
-
-    stage('IO - Get Prescription') {
-        steps {
-        echo "Getting Prescription"
-        sh '''
-          projectID=$(/tmp/getProjectID.sh --url=${CODEDX_URL} --apikey=${CODEDX_TOKEN} --project=${PROJECT})
-          /tmp/prescription.sh \
-            --stage="IO" \
-            --persona="devsecops" \
-            --io.url="${IO_SERVER_URL}/api/ioiq/" \
-            --io.token="${IO_TOKEN}" \
-            --manifest.type="json" \
-            --project.name="${PROJECT}" \
-            --asset.id="${PROJECT}" \
-            --workflow.url="${IO_SERVER_URL}/api/workflowengine/" \
-            --workflow.version="2022.4.1" \
-            --file.change.threshold="10" \
-            --sast.rescan.threshold="20" \
-            --sca.rescan.threshold="20" \
-            --scm.type="github" \
-            --scm.owner="jones6951" \
-            --scm.repo.name="jhipster-sample-app" \
-            --scm.branch.name="${BRANCH}" \
-            --github.username="jones6951" \
-            --github.token="${GITHUB_TOKEN}" \
-            --polaris.project.name="${PROJECT}" \
-            --polaris.branch.name="${BRANCH}" \
-            --polaris.url="${POLARIS_SERVER_URL}" \
-            --polaris.token="${POLARIS_ACCESS_TOKEN}" \
-            --blackduck.project.name="${PROJECT}:${VERSION}" \
-            --blackduck.url="${BLACKDUCK_SERVER_URL}" \
-            --blackduck.api.token="${BLACKDUCK_ACCESS_TOKEN}" \
-            --jira.enable="false" \
-            --codedx.url="${CODEDX_URL}/codedx" \
-            --codedx.api.key="${CODEDX_TOKEN}" \
-            --codedx.project.id="$projectID" \
-            --IS_SAST_ENABLED="false" \
-            --IS_SCA_ENABLED="false" \
-            --IS_DAST_ENABLED="false"
-        '''
-        script {
-          env.IS_SAST_ENABLED = sh(script:'jq -r ".security.activities.sast.enabled" result.json', returnStdout: true).trim()
-          env.IS_SCA_ENABLED = sh(script:'jq -r ".security.activities.sca.enabled" result.json', returnStdout: true).trim()
-          env.IS_DAST_ENABLED = sh(script:'jq -r ".security.activities.dast.enabled" result.json', returnStdout: true).trim()
-          env.IS_DASTPLUSM_ENABLED = sh(script:'jq -r ".security.activities.dastplusm.enabled" result.json', returnStdout: true).trim()
-          env.IS_SASTPLUSM_ENABLED = sh(script:'jq -r ".security.activities.sastplusm.enabled" result.json', returnStdout: true).trim()
-          env.IS_IMAGESCAN_ENABLED = sh(script:'jq -r ".security.activities.imagescan.enabled" result.json', returnStdout: true).trim()
-        }
-      }
-    }
-
-    stage('SAST - Coverity on Polaris') {
-      when {
-        expression { env.IS_SAST_ENABLED == "true" }
-      }
+    stage('SAST - Coverity') {
       steps {
         sh '''
           #if [ ${env.IS_SAST_ENABLED} = "true" ]; then
@@ -117,9 +62,6 @@ pipeline {
       }
     }
     stage ('SCA - Black Duck') {
-      when {
-        expression { env.IS_SCA_ENABLED == "true" }
-      }
       steps {
         sh '''
           echo "Running BlackDuck"
@@ -130,11 +72,7 @@ pipeline {
         '''
       }
     }
-
     stage ('IAST - Seeker') {
-      when {
-        expression { env.IS_DAST_ENABLED == "true" }
-      }
       steps {
         sh '''#!/bin/bash
           if [ ! -z ${SERVER_WORKINGDIR} ]; then cd ${SERVER_WORKINGDIR}; fi
@@ -165,49 +103,6 @@ pipeline {
             echo $serverMessage
             return 1
           fi
-        '''
-      }
-    }
-
-    stage ('IO Workflow - Code Dx') {
-      steps {
-        sh '''
-          projectID=$(/tmp/getProjectID.sh --url=${CODEDX_URL} --apikey=${CODEDX_TOKEN} --project=${PROJECT})
-          /tmp/prescription.sh \
-            --stage="WORKFLOW" \
-            --persona="devsecops" \
-            --project.name="${PROJECT}" \
-            --io.url="${IO_SERVER_URL}/api/ioiq/" \
-            --io.token="${IO_TOKEN}" \
-            --manifest.type="json" \
-            --asset.id="${PROJECT}" \
-            --workflow.url="${IO_SERVER_URL}/api/workflowengine/" \
-            --workflow.version="2022.4.1" \
-            --file.change.threshold="10" \
-            --sast.rescan.threshold="20" \
-            --sca.rescan.threshold="20" \
-            --scm.type="github" \
-            --scm.owner="jones6951" \
-            --scm.repo.name="jhipster-sample-app" \
-            --scm.branch.name="${BRANCH}" \
-            --github.username="jones6951" \
-            --github.token="${GITHUB_TOKEN}" \
-            --polaris.project.name="${PROJECT}" \
-            --polaris.branch.name="${BRANCH}" \
-            --polaris.url="${POLARIS_SERVER_URL}" \
-            --polaris.token="${POLARIS_ACCESS_TOKEN}" \
-            --blackduck.project.name="${PROJECT}:${VERSION}" \
-            --blackduck.url="${BLACKDUCK_URL}" \
-            --blackduck.api.token="${BLACKDUCK_ACCESS_TOKEN}" \
-            --jira.enable="false" \
-            --codedx.url="${CODEDX_URL}/codedx" \
-            --codedx.api.key="${CODEDX_TOKEN}" \
-            --codedx.project.id="$projectID" \
-            --IS_SAST_ENABLED="${IS_SAST_ENABLED}" \
-            --IS_SCA_ENABLED="${IS_SCA_ENABLED}" \
-            --IS_DAST_ENABLED="${IS_DAST_ENABLED}"
-
-          java -jar WorkflowClient.jar --workflowengine.url="${IO_SERVER_URL}/api/workflowengine/" --io.manifest.path=synopsys-io.json
         '''
       }
     }
