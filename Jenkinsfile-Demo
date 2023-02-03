@@ -72,7 +72,7 @@ pipeline {
         '''
       }
     }
-    stage ('IAST - Seeker') {
+    stage ('IAST - Seeker (Functional Testing Step)') {
       steps {
         sh '''#!/bin/bash
           if [ ! -z ${SERVER_WORKINGDIR} ]; then cd ${SERVER_WORKINGDIR}; fi
