@@ -1,3 +1,9 @@
+
+def CONNECT = 'https://poc295.coverity.synopsys.com'
+def PROJECT = 'Jhipster'
+def STREAM = 'Jhipster'
+def
+
 pipeline {
   agent any
 
@@ -7,7 +13,7 @@ pipeline {
     BRANCH = 'main'
     POLARIS_ACCESS_TOKEN = credentials('polaris-token')
     BLACKDUCK_ACCESS_TOKEN = credentials('BlackDuck-AuthToken')
-    CODEDX_TOKEN = credentials('CODEDX_API_KEY')
+    CODEDX_ACCESS_TOKEN = credentials('CODEDX_API_KEY')
     GITHUB_TOKEN = credentials('github-token')
     SEEKER_TOKEN = credentials('SEEKER_TOKEN')
     SERVER_START = "java -javaagent:seeker/seeker-agent.jar -jar target/jhipster-sample-application-0.0.1-SNAPSHOT.jar"
@@ -32,33 +38,25 @@ pipeline {
     stage('Set Up Environment') {
       steps {
         sh '''
-          curl -s -L https://raw.githubusercontent.com/jones6951/io-scripts/main/getProjectID.sh > /tmp/getProjectID.sh
-          curl -s -L https://raw.githubusercontent.com/jones6951/io-scripts/main/serverStart.sh > /tmp/serverStart.sh
-          curl -s -L https://raw.githubusercontent.com/jones6951/io-scripts/main/isNumeric.sh > /tmp/isNumeric.sh
-          curl -s -L https://raw.githubusercontent.com/synopsys-sig/io-artifacts/main/prescription.sh > /tmp/prescription.sh
+          curl -s -L https://raw.githubusercontent.com/dc-moses/io-scripts/main/getProjectID.sh > /tmp/getProjectID.sh
+          curl -s -L https://raw.githubusercontent.com/dc-moses/io-scripts/main/serverStart.sh > /tmp/serverStart.sh
+          curl -s -L https://raw.githubusercontent.com/dc-moses/io-scripts/main/isNumeric.sh > /tmp/isNumeric.sh
 
           chmod +x /tmp/getProjectID.sh
           chmod +x /tmp/serverStart.sh
           chmod +x /tmp/isNumeric.sh
-          chmod +x /tmp/prescription.sh
         '''
       }
     }
     stage('SAST - Coverity') {
       steps {
-        sh '''
-          #if [ ${env.IS_SAST_ENABLED} = "true" ]; then
-          echo "Running Coverity on Polaris"
-          rm -fr /tmp/polaris 2>/dev/null
-          wget -q ${POLARIS_SERVER_URL}/api/tools/polaris_cli-linux64.zip
-          unzip -j polaris_cli-linux64.zip -d /tmp
-          rm polaris_cli-linux64.zip
-          /tmp/polaris --persist-config --co project.name="${PROJECT}" --co project.branch="${BRANCH}" --co capture.build.buildCommands="null" --co capture.build.cleanCommands="null" --co capture.fileSystem="null" --co capture.coverity.autoCapture="enable" configure
-          /tmp/polaris analyze -w
-          #else
-          #  echo "Skipping Coverity on Polaris based on prescription"
-          #fi
+        withCoverityEnvironment(coverityInstanceUrl: "$CONNECT", projectName: "$PROJECT", streamName: "$STREAM") {
+           sh '''
+             cov-build --dir idir mvn -B clean package -DskipTests
+             cov-analyze --dir idir --strip-path $WORKSPACE --webapp-security
+             cov-commit-defects --dir idir --url $COV_URL --stream $COV_STREAM --scm git
         '''
+        }
       }
     }
     stage ('SCA - Black Duck') {
@@ -103,6 +101,21 @@ pipeline {
             echo $serverMessage
             return 1
           fi
+        '''
+      }
+    }
+    stage ('Code DX - Analysis') {
+      steps {
+        sh '''
+          curl -X 'POST' \
+            'https://demo.codedx.synopsys.com/codedx/api/projects/8%3Bbranch%3Dmain/analysis' \
+            -H 'accept: */*' \
+            -H 'Content-Type: multipart/form-data' \
+            -H "API-Key: ${CODEDX_ACCESS_TOKEN}" \
+            -F 'filenames=' \
+            -F 'includeGitSource=true' \
+            -F 'gitBranchName=master' \
+            -F 'branchName='5
         '''
       }
     }
