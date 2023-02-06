@@ -6,7 +6,7 @@ pipeline {
     BRANCH = 'main'
     COVERITY_ACCESS_TOKEN = credentials('coveirity2-token')
     BLACKDUCK_ACCESS_TOKEN = credentials('BlackDuck2-AuthToken')
-    CODEDX_ACCESS_TOKEN = credentials('CODEDX2_API_KEY')
+    CODEDX_ACCESS_TOKEN = credentials('CODEDX_API_KEY')
     GITHUB_TOKEN = credentials('github-token')
     SEEKER_TOKEN = credentials('SEEKER2_TOKEN')
     SERVER_START = "java -javaagent:seeker/seeker-agent.jar -jar target/jhipster-sample-application-0.0.1-SNAPSHOT.jar"
