@@ -4,7 +4,7 @@ pipeline {
   environment {
     VERSION = '1.0'
     BRANCH = 'main'
-    COVERITY_ACCESS_TOKEN = credentials('coveirity2-token')
+    COVERITY_ACCESS_TOKEN = credentials('coveirity-token')
     BLACKDUCK_ACCESS_TOKEN = credentials('BlackDuck2-AuthToken')
     CODEDX_ACCESS_TOKEN = credentials('CODEDX_API_KEY')
     GITHUB_TOKEN = credentials('github-token')
