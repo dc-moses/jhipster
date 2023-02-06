@@ -16,6 +16,7 @@ pipeline {
     CONNECT = 'https://poc295.coverity.synopsys.com'
     PROJECT = 'Jhipster'
     STREAM = 'Jhipster'
+    COV_TOOLKIT=cov-analysis-linux64-2022.12.1
   }
 
   stages{
@@ -36,7 +37,10 @@ pipeline {
           curl -s -L https://raw.githubusercontent.com/dc-moses/io-scripts/main/getProjectID.sh > /tmp/getProjectID.sh
           curl -s -L https://raw.githubusercontent.com/dc-moses/io-scripts/main/serverStart.sh > /tmp/serverStart.sh
           curl -s -L https://raw.githubusercontent.com/dc-moses/io-scripts/main/isNumeric.sh > /tmp/isNumeric.sh
-
+          curl -fLsS --user $COV_USER:$COVERITY_PASSPHRASE $COV_URL/downloadFile.htm?fn=$COV_TOOLKIT.tar.gz | tar -C $WORKSPACE_TMP -xzf -
+          curl -fLsS --user $COV_USER:$COVERITY_PASSPHRASE -o $WORKSPACE_TMP/$COV_TOOLKIT/bin/license.dat $COV_URL/downloadFile.htm?fn=license.dat
+          export PATH=$PATH:$WORKSPACE_TMP/$COV_TOOLKIT/bin
+          
           chmod +x /tmp/getProjectID.sh
           chmod +x /tmp/serverStart.sh
           chmod +x /tmp/isNumeric.sh
