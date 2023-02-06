@@ -1,9 +1,3 @@
-
-def CONNECT = 'https://poc295.coverity.synopsys.com'
-def PROJECT = 'Jhipster'
-def STREAM = 'Jhipster'
-def
-
 pipeline {
   agent any
 
@@ -21,6 +15,9 @@ pipeline {
     SERVER_WORKINGDIR = ""
     SEEKER_RUN_TIME = 180
     SEEKER_PROJECT_KEY = 'jhip'
+    CONNECT = 'https://poc295.coverity.synopsys.com'
+    PROJECT = 'Jhipster'
+    STREAM = 'Jhipster'
   }
 
   stages{
