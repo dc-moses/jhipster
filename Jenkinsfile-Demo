@@ -43,10 +43,6 @@ pipeline {
           chmod +x /tmp/getProjectID.sh
           chmod +x /tmp/serverStart.sh
           chmod +x /tmp/isNumeric.sh
-          
-          curl -fLsS --user $COV_USER:$COVERITY_PASSPHRASE https://poc295.coverity.synopsys.com/downloadFile.htm?fn=$COV_TOOLKIT.tar.gz | tar -C $WORKSPACE_TMP -xzf -
-          curl -fLsS --user $COV_USER:$COVERITY_PASSPHRASE -o $WORKSPACE_TMP/$COV_TOOLKIT/bin/license.dat https://poc295.coverity.synopsys.com/downloadFile.htm?fn=license.dat
-          export PATH=$PATH:$WORKSPACE_TMP/$COV_TOOLKIT/bin
          
         '''
       }
@@ -55,7 +51,12 @@ pipeline {
       steps {
         withCoverityEnvironment(coverityInstanceUrl: "$CONNECT", projectName: "$PROJECT", streamName: "$STREAM") {
            sh '''
-             cov-build --dir idir mvn -B clean package -DskipTests
+           
+          curl -fLsS --user $COV_USER:$COVERITY_PASSPHRASE https://poc295.coverity.synopsys.com/downloadFile.htm?fn=$COV_TOOLKIT.tar.gz | tar -C /tmp -xzf -
+          curl -fLsS --user $COV_USER:$COVERITY_PASSPHRASE -o /tmp/$COV_TOOLKIT/bin/license.dat https://poc295.coverity.synopsys.com/downloadFile.htm?fn=license.dat
+          export PATH=$PATH:$WORKSPACE_TMP/$COV_TOOLKIT/bin
+          
+          cov-build --dir idir mvn -B clean package -DskipTests
              cov-analyze --dir idir --strip-path $WORKSPACE --webapp-security
              cov-commit-defects --dir idir --url $COV_URL --stream $COV_STREAM --scm git
         '''
