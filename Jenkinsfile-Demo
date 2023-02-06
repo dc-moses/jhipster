@@ -17,6 +17,8 @@ pipeline {
     PROJECT = 'Jhipster'
     STREAM = 'Jhipster'
     COV_TOOLKIT=cov-analysis-linux64-2022.12.1
+    COV_USER = 'admin'
+    COV_PASSPHRASE = credentials('COV_PASS')
   }
 
   stages{
