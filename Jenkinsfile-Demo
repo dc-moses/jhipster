@@ -36,16 +36,18 @@ pipeline {
     stage('Set Up Environment') {
       steps {
         sh '''
-          curl -s -L https://raw.githubusercontent.com/dc-moses/io-scripts/main/getProjectID.sh > /tmp/getProjectID.sh
-          curl -s -L https://raw.githubusercontent.com/dc-moses/io-scripts/main/serverStart.sh > /tmp/serverStart.sh
-          curl -s -L https://raw.githubusercontent.com/dc-moses/io-scripts/main/isNumeric.sh > /tmp/isNumeric.sh
-          curl -fLsS --user $COV_USER:$COVERITY_PASSPHRASE https://poc295.coverity.synopsys.com/downloadFile.htm?fn=$COV_TOOLKIT.tar.gz | tar -C $WORKSPACE_TMP -xzf -
-          curl -fLsS --user $COV_USER:$COVERITY_PASSPHRASE -o $WORKSPACE_TMP/$COV_TOOLKIT/bin/license.dat https://poc295.coverity.synopsys.com/downloadFile.htm?fn=license.dat
-          export PATH=$PATH:$WORKSPACE_TMP/$COV_TOOLKIT/bin
+          curl -s -L https://raw.githubusercontent.com/jones6951/io-scripts/main/getProjectID.sh > /tmp/getProjectID.sh
+          curl -s -L https://raw.githubusercontent.com/jones6951/io-scripts/main/serverStart.sh > /tmp/serverStart.sh
+          curl -s -L https://raw.githubusercontent.com/jones6951/io-scripts/main/isNumeric.sh > /tmp/isNumeric.sh
           
           chmod +x /tmp/getProjectID.sh
           chmod +x /tmp/serverStart.sh
           chmod +x /tmp/isNumeric.sh
+          
+          curl -fLsS --user $COV_USER:$COVERITY_PASSPHRASE https://poc295.coverity.synopsys.com/downloadFile.htm?fn=$COV_TOOLKIT.tar.gz | tar -C $WORKSPACE_TMP -xzf -
+          curl -fLsS --user $COV_USER:$COVERITY_PASSPHRASE -o $WORKSPACE_TMP/$COV_TOOLKIT/bin/license.dat https://poc295.coverity.synopsys.com/downloadFile.htm?fn=license.dat
+          export PATH=$PATH:$WORKSPACE_TMP/$COV_TOOLKIT/bin
+         
         '''
       }
     }
