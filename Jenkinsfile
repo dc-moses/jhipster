@@ -16,9 +16,6 @@ pipeline {
     CONNECT = 'https://poc295.coverity.synopsys.com'
     PROJECT = 'Jhipster'
     STREAM = 'Jhipster'
-    COV_TOOLKIT= 'cov-analysis-linux64-2022.12.1'
-    COV_USER = 'admin'
-    COVERITY_PASSPHRASE = credentials('COV_PASS')
   }
 
   stages{
@@ -43,24 +40,50 @@ pipeline {
           chmod +x /tmp/getProjectID.sh
           chmod +x /tmp/serverStart.sh
           chmod +x /tmp/isNumeric.sh
-          
-          curl -fLsS --user $COV_USER:$COVERITY_PASSPHRASE https://poc295.coverity.synopsys.com/downloadFile.htm?fn=$COV_TOOLKIT.tar.gz | tar -C /tmp -xzf -
-          curl -fLsS --user $COV_USER:$COVERITY_PASSPHRASE -o /tmp/$COV_TOOLKIT/bin/license.dat https://poc295.coverity.synopsys.com/downloadFile.htm?fn=license.dat
-          export PATH=$PATH:/tmp/$COV_TOOLKIT/bin
-         
         '''
       }
     }
     stage('SAST - Coverity') {
-      steps {
-        withCoverityEnvironment(coverityInstanceUrl: "$CONNECT", projectName: "$PROJECT", streamName: "$STREAM") {
-           sh '''
-          cov-build --dir idir mvn -B clean package -DskipTests
-             cov-analyze --dir idir --strip-path $WORKSPACE --webapp-security
-             cov-commit-defects --dir idir --url $COV_URL --stream $COV_STREAM --scm git
-        '''
+        when {
+            allOf {
+                not { changeRequest() }
+                expression { BRANCH_NAME ==~ /(main|stage|release)/ }
+            }
         }
-      }
+        steps {
+            withCoverityEnvironment(coverityInstanceUrl: "$CONNECT", projectName: "$PROJECT", streamName: "$STREAM") {
+                sh '''
+                    cov-build --dir idir mvn -B clean package -DskipTests
+                    cov-analyze --dir idir --strip-path $WORKSPACE --webapp-security
+                    cov-commit-defects --dir idir --url $COV_URL --stream $COV_STREAM --scm git
+                '''
+                }
+            }
+        }
+    }
+    stage('Coverity Incremental Scan') {
+        when {
+            allOf {
+                changeRequest()
+                expression { CHANGE_TARGET ==~ /(main|stage|release)/ }
+            }
+        }
+        steps {
+            withCoverityEnvironment(coverityInstanceUrl: "$CONNECT", projectName: "$PROJECT", streamName: "$PROJECT-$CHANGE_TARGET") {
+                sh '''
+                    export CHANGE_SET=$(git --no-pager diff origin/$CHANGE_TARGET --name-only)
+                    [ -z "$CHANGE_SET" ] && exit 0
+                    cov-run-desktop --dir idir --url $COV_URL --stream $COV_STREAM --build $BLDCMD
+                    cov-run-desktop --dir idir --url $COV_URL --stream $COV_STREAM --present-in-reference false \
+                        --ignore-uncapturable-inputs true --text-output issues.txt $CHANGE_SET
+                    if [ -s issues.txt ]; then cat issues.txt; touch issues_found; fi
+                '''
+            }
+            script { // Coverity Quality Gate
+                if (fileExists('issues_found')) { unstable 'issues detected' }
+                }
+            }
+        }
     }
     stage ('SCA - Black Duck') {
       steps {
